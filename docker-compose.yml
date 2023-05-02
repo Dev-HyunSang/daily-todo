@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  mysql:
+    container_name: daily_todo_mysql
+    image: mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=daily_todo
+    ports:
+      - 3306:3306
+    volumes:
+      - ./docker/mysql:/var/lib/mysql
+  redis:
+    container_name: daily_todo_redis
+    image: redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./docker/redis/data:/data
+      - ./docker/redis/conf/redis.conf:/usr/local/conf/redis.conf
+    labels:
+      - "name=redis"
+      - "mode=standalone"
+    restart: always
+    command: redis-server /usr/local/conf/redis.conf
