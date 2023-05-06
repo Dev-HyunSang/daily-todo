@@ -16,7 +16,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    err.Error(),
@@ -28,7 +28,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 	// 입력 값 검증.
 	if len(req.Email) == 0 || len(req.Password) == 0 || len(req.NickName) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    "필수 입력값이 입력되지 않았습니다. 확인 후 다시 시도해 주세요.",
@@ -40,7 +40,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 	result, err := database.SearchUserByEmail(req.Email)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -49,7 +49,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 		})
 	} else if result.Email == req.Email {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    "이미 존재하는 이메일입니다. 확인 후 다시 시도해 주세요.",
@@ -62,7 +62,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 	pwHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -81,7 +81,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 	})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -106,7 +106,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    err.Error(),
@@ -118,7 +118,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 	user, err := database.SearchUserByEmail(req.Email)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -126,7 +126,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 		})
 	} else if user.Email != req.Email {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    "존재하지 않는 이메일입니다. 확인 후 다시 시도해 주세요.",
@@ -137,7 +137,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusUnauthorized,
 				Message:    "비밀번호가 일치하지 않습니다. 확인 후 다시 시도해 주세요.",
@@ -149,7 +149,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 	ts, err := auth.CreateJWT(user.UserUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -161,7 +161,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 	err = auth.InsertRedisAuth(user.UserUUID, ts)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
-			MetaData: models.MetaData{
+			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
 				StatusCode: fiber.StatusInternalServerError,
 				Message:    err.Error(),
@@ -177,6 +177,42 @@ func LoginUserHandler(c *fiber.Ctx) error {
 			Message:    "어서와요! 성공적으로 로그인이 완료되었습니다!",
 		},
 		Data:        *ts,
+		ResponsedAt: time.Now(),
+	})
+}
+
+func LogoutUserHandler(c *fiber.Ctx) error {
+	au, err := auth.ExtractTokenMetaData(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrResponse{
+			ErrMetaData: models.ErrMetaData{
+				IsSuccess:  false,
+				StatusCode: fiber.StatusUnauthorized,
+				Message:    "잘못된 접근이예요. 로그인 이후에 시도해 주세요!",
+			},
+			ResponsedAt: time.Now(),
+		})
+	}
+
+	deleted, err := auth.DeleteAuth(au.AccessUUID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
+			ErrMetaData: models.ErrMetaData{
+				IsSuccess:  false,
+				StatusCode: fiber.StatusInternalServerError,
+				Message:    err.Error(),
+			},
+			ResponsedAt: time.Now(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(models.ResponseDoneLogoutUser{
+		MetaData: models.MetaData{
+			IsSuccess:  false,
+			StatusCode: fiber.StatusOK,
+			Message:    "성공적으로 로그아웃 하였습니다.",
+		},
+		Data:        deleted,
 		ResponsedAt: time.Now(),
 	})
 }
