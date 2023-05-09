@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dev-hyunsang/daily-todo/ent/schema"
+	"github.com/dev-hyunsang/daily-todo/ent/todo"
 	"github.com/dev-hyunsang/daily-todo/ent/user"
 	"github.com/google/uuid"
 )
@@ -14,6 +15,20 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	todoFields := schema.ToDo{}.Fields()
+	_ = todoFields
+	// todoDescTodoUUID is the schema descriptor for todo_uuid field.
+	todoDescTodoUUID := todoFields[0].Descriptor()
+	// todo.DefaultTodoUUID holds the default value on creation for the todo_uuid field.
+	todo.DefaultTodoUUID = todoDescTodoUUID.Default.(func() uuid.UUID)
+	// todoDescIsDone is the schema descriptor for is_done field.
+	todoDescIsDone := todoFields[2].Descriptor()
+	// todo.DefaultIsDone holds the default value on creation for the is_done field.
+	todo.DefaultIsDone = todoDescIsDone.Default.(bool)
+	// todoDescContext is the schema descriptor for context field.
+	todoDescContext := todoFields[3].Descriptor()
+	// todo.DefaultContext holds the default value on creation for the context field.
+	todo.DefaultContext = todoDescContext.Default.(string)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUserUUID is the schema descriptor for user_uuid field.

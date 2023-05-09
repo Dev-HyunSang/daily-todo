@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"github.com/dev-hyunsang/daily-todo/ent/todo"
 	"github.com/dev-hyunsang/daily-todo/ent/user"
 )
 
@@ -21,6 +22,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// ToDo is the client for interacting with the ToDo builders.
+	ToDo *ToDoClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -36,6 +39,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.ToDo = NewToDoClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -119,6 +123,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:    ctx,
 		config: cfg,
+		ToDo:   NewToDoClient(cfg),
 		User:   NewUserClient(cfg),
 	}, nil
 }
@@ -139,6 +144,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:    ctx,
 		config: cfg,
+		ToDo:   NewToDoClient(cfg),
 		User:   NewUserClient(cfg),
 	}, nil
 }
@@ -146,7 +152,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		User.
+//		ToDo.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -168,22 +174,144 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.ToDo.Use(hooks...)
 	c.User.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.ToDo.Intercept(interceptors...)
 	c.User.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *ToDoMutation:
+		return c.ToDo.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// ToDoClient is a client for the ToDo schema.
+type ToDoClient struct {
+	config
+}
+
+// NewToDoClient returns a client for the ToDo from the given config.
+func NewToDoClient(c config) *ToDoClient {
+	return &ToDoClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `todo.Hooks(f(g(h())))`.
+func (c *ToDoClient) Use(hooks ...Hook) {
+	c.hooks.ToDo = append(c.hooks.ToDo, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `todo.Intercept(f(g(h())))`.
+func (c *ToDoClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ToDo = append(c.inters.ToDo, interceptors...)
+}
+
+// Create returns a builder for creating a ToDo entity.
+func (c *ToDoClient) Create() *ToDoCreate {
+	mutation := newToDoMutation(c.config, OpCreate)
+	return &ToDoCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ToDo entities.
+func (c *ToDoClient) CreateBulk(builders ...*ToDoCreate) *ToDoCreateBulk {
+	return &ToDoCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ToDo.
+func (c *ToDoClient) Update() *ToDoUpdate {
+	mutation := newToDoMutation(c.config, OpUpdate)
+	return &ToDoUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ToDoClient) UpdateOne(td *ToDo) *ToDoUpdateOne {
+	mutation := newToDoMutation(c.config, OpUpdateOne, withToDo(td))
+	return &ToDoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ToDoClient) UpdateOneID(id int) *ToDoUpdateOne {
+	mutation := newToDoMutation(c.config, OpUpdateOne, withToDoID(id))
+	return &ToDoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ToDo.
+func (c *ToDoClient) Delete() *ToDoDelete {
+	mutation := newToDoMutation(c.config, OpDelete)
+	return &ToDoDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ToDoClient) DeleteOne(td *ToDo) *ToDoDeleteOne {
+	return c.DeleteOneID(td.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ToDoClient) DeleteOneID(id int) *ToDoDeleteOne {
+	builder := c.Delete().Where(todo.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ToDoDeleteOne{builder}
+}
+
+// Query returns a query builder for ToDo.
+func (c *ToDoClient) Query() *ToDoQuery {
+	return &ToDoQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeToDo},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ToDo entity by its id.
+func (c *ToDoClient) Get(ctx context.Context, id int) (*ToDo, error) {
+	return c.Query().Where(todo.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ToDoClient) GetX(ctx context.Context, id int) *ToDo {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ToDoClient) Hooks() []Hook {
+	return c.hooks.ToDo
+}
+
+// Interceptors returns the client interceptors.
+func (c *ToDoClient) Interceptors() []Interceptor {
+	return c.inters.ToDo
+}
+
+func (c *ToDoClient) mutate(ctx context.Context, m *ToDoMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ToDoCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ToDoUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ToDoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ToDoDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ToDo mutation op: %q", m.Op())
 	}
 }
 
@@ -308,9 +436,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		User []ent.Hook
+		ToDo, User []ent.Hook
 	}
 	inters struct {
-		User []ent.Interceptor
+		ToDo, User []ent.Interceptor
 	}
 )
