@@ -16,6 +16,12 @@
     - [POST `/api/todos/list`](#post-apitodoslist)
       - [Request](#request-3)
       - [Response](#response-3)
+    - [POST `/api/todos/edit`](#post-apitodosedit)
+      - [Request](#request-4)
+      - [Response](#response-4)
+    - [DELETE `/api/todos/delete`](#delete-apitodosdelete)
+      - [Reqeust](#reqeust)
+      - [Response](#response-5)
 
 ## REST API Docs
 
@@ -138,5 +144,54 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfdXVpZCI6ImIxMzJjYzVlLWNjZjYtNDQ
         }
     ],
     "responsed_at": "2023-05-06T16:26:50.310999+09:00"
+}
+```
+
+### POST `/api/todos/edit`
+
+#### Request
+```json
+{
+    "todo_uuid": "6d0c7181-5c0a-4620-8fcb-2dc478d9df55",
+    "is_done": false,
+    "context": "we are golang!"
+}
+```
+
+#### Response
+```json
+{
+    "meta_data": {
+        "is_success": true,
+        "status_code": 200,
+        "message": "성공적으로 소중한 할 일을 수정하였습니다."
+    },
+    "responsed_at": "2023-05-09T16:11:16.861953+09:00"
+}
+```
+
+### DELETE `/api/todos/delete`
+
+#### Reqeust
+- `Bearer Token`를 사용합니다.
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NfdXVpZCI6IjUxODA2ZTcyLTBhMWMtNDhmMS1iZGI2LWM3YmRmN2MwYjA4MyIsImF1dGhvcml6ZWQiOnRydWUsImV4cCI6MTY4MzYxNjIwOCwidXNlcl91dWlkIjoiZTcyYmNiNzgtOWJhYi00MzYwLWE5NmYtOGM0MDMzYzg2YmI3In0.GYYhx1jVz0K-T12KQFI_vVSYqGD7fDoviDrj8IHTvnY
+```
+```json
+{
+    "todo_uuid": "6d3c65a0-fe8a-46b9-930f-4434d4adffc9"
+}
+```
+
+#### Response
+```json
+{
+    "meta_data": {
+        "is_success": true,
+        "status_code": 200,
+        "message": "성공적으로 사용자의 할 일을 삭제했습니다."
+    },
+    "data": 1,
+    "responsed_at": "2023-05-09T15:59:02.567067+09:00"
 }
 ```
