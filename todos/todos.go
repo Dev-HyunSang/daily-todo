@@ -1,6 +1,7 @@
 package todos
 
 import (
+	"log"
 	"time"
 
 	"github.com/dev-hyunsang/daily-todo/auth"
@@ -97,6 +98,8 @@ func AllListToDoHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{})
 	}
 
+	log.Println(result)
+
 	return c.Status(fiber.StatusOK).JSON(models.ResponseDoneAllListToDo{
 		MetaData: models.MetaData{
 			IsSuccess:  true,
@@ -109,7 +112,52 @@ func AllListToDoHandler(c *fiber.Ctx) error {
 }
 
 func EditToDoHandler(c *fiber.Ctx) error {
-	return nil
+	req := new(models.RequestEditToDo)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusMethodNotAllowed).JSON(models.ErrResponse{
+			ErrMetaData: models.ErrMetaData{
+				IsSuccess:  false,
+				StatusCode: fiber.StatusMethodNotAllowed,
+				Message:    "잘못된 요청입니다. 다시 시도해 주세요.",
+				ErrMessage: err.Error(),
+			},
+			ResponsedAt: time.Now(),
+		})
+	}
+
+	au, err := auth.ExtractTokenMetaData(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(models.ErrResponse{
+			ErrMetaData: models.ErrMetaData{
+				IsSuccess:  false,
+				StatusCode: fiber.StatusUnauthorized,
+				Message:    "잘못된 접근이예요. 로그인 이후에 시도해 주세요!",
+				ErrMessage: err.Error(),
+			},
+			ResponsedAt: time.Now(),
+		})
+	}
+
+	if err = database.EditToDo(au.UserUUID, req.ToDoUUID, req.Context, req.IsDone); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
+			ErrMetaData: models.ErrMetaData{
+				IsSuccess:  false,
+				StatusCode: fiber.StatusInternalServerError,
+				Message:    "사용자 분의 소중한 할 일을 수정하던 도중 오류가 발생했어요. 잠시후 다시 시도해 주세요.",
+				ErrMessage: err.Error(),
+			},
+			ResponsedAt: time.Now(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(models.ResponseDoneEditToDo{
+		MetaData: models.MetaData{
+			IsSuccess:  true,
+			StatusCode: fiber.StatusOK,
+			Message:    "성공적으로 소중한 할 일을 수정하였습니다.",
+		},
+		ResponsedAt: time.Now(),
+	})
 }
 
 func DeleteToDoHandler(c *fiber.Ctx) error {
