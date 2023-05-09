@@ -17,4 +17,6 @@ func Middleware(app *fiber.App) {
 	todos := api.Group("/todos")
 	todos.Post("/create", ToDo.CreateToDoHandler)
 	todos.Post("/list", ToDo.AllListToDoHandler)
+	todos.Post("/edit", ToDo.EditToDoHandler)
+	todos.Delete("/delete", ToDo.DeleteToDoHandler)
 }
