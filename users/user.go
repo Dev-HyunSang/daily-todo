@@ -53,6 +53,7 @@ func JoinUserHandler(c *fiber.Ctx) error {
 				IsSuccess:  false,
 				StatusCode: fiber.StatusBadRequest,
 				Message:    "이미 존재하는 이메일입니다. 확인 후 다시 시도해 주세요.",
+				ErrMessage: err.Error(),
 			},
 			ResponsedAt: time.Now(),
 		})
