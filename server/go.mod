@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/fatih/color v1.15.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.27.6 // indirect
 )

@@ -22,4 +22,7 @@ go.work
 
 # Docker Container Volume
 docker
+docker/mysql
+docker/redis
+
 .env
