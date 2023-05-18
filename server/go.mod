@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	entgo.io/ent v0.12.2
+	github.com/fatih/color v1.15.0
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gofiber/fiber/v2 v2.44.0
@@ -13,7 +14,6 @@ require (
 )
 
 require (
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.27.6 // indirect
 )
