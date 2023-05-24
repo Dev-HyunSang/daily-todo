@@ -147,7 +147,7 @@ func LoginUserHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	ts, err := auth.CreateJWT(user.UserUUID)
+	ts, err := auth.CreateToken(user.UserUUID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
 			ErrMetaData: models.ErrMetaData{

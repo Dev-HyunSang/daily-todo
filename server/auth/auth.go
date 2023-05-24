@@ -26,7 +26,7 @@ func RedisInit() *redis.Client {
 	return client
 }
 
-func CreateJWT(userUUID uuid.UUID) (*models.TokenDetails, error) {
+func CreateToken(userUUID uuid.UUID) (*models.TokenDetails, error) {
 	var err error
 	td := new(models.TokenDetails)
 
