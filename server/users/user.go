@@ -1,6 +1,7 @@
 package users
 
 import (
+	"log"
 	"time"
 
 	"github.com/dev-hyunsang/daily-todo/auth"
@@ -37,8 +38,11 @@ func JoinUserHandler(c *fiber.Ctx) error {
 		})
 	}
 
+	// 데이터가 없는 경우 오류 발생
+	// TODO: 이메일 중복 검사 알고리즘 개선 필요.
 	result, err := database.SearchUserByEmail(req.Email)
 	if err != nil {
+		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrResponse{
 			ErrMetaData: models.ErrMetaData{
 				IsSuccess:  false,
